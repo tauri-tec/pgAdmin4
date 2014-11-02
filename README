@@ -1,0 +1,5 @@
+A first stab at a new/better pgAdmin.
+
+Requires sqlalchemy .9.8 or higher, a recent psycopg2 and wxPython 3.
+
+
