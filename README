@@ -1,5 +1,31 @@
 A first stab at a new/better pgAdmin.
 
-Requires sqlalchemy .9.8 or higher, a recent psycopg2 and wxPython 3.
+Requires python 2.7, sqlalchemy .9.8 or higher, a recent psycopg2 and wxPython 3.
 
+Goals (or why another db interface)
+
+pgAdminIII is pretty good, but it does have a tendency to crash at inopportune times, and is in c/c++ which I find is quite inapproachable and difficult to contribute to.  As such, I am hoping a concise python based desktop program will fill what I feel is a bit of a gap in the postgres community.
+
+* Regular (nightly?) builds, and more regular releases than pgAdmin3
+
+* Auto update mechanism
+
+* SSH Tunnel setup
+
+* Integration of pgHero
+
+* Common db reports/analisys such as:
+  * built in useful queries of pg_stat_statements
+  * Checks for missing foreign keys
+  * Cache hit ratio checks/index usage checks
+
+* Other cool queries that come out of planet postgres blogs/heroku blogs
+
+* Possible interoperability with cool projects like POWA - http://dalibo.github.io/powa/
+
+* copy database functionality
+
+* alembic integration - http://alembic.readthedocs.org/en/latest/tutorial.html
+
+* sql command line editor AND sqlalchemy query editor.
 
