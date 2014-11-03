@@ -7,12 +7,10 @@ import os
 
 # Set up some button numbers for the menu
 
-ID_ABOUT=101
-ID_OPEN=102
-ID_SAVE=103
-ID_BUTTON1=300
-ID_EXIT=200
-ID_FRAME1LISTBOX1=150
+ID_DB_LISTBOX=300
+ID_TABLE_LISTBOX=150
+ID_RUN_BUTTON=400
+
 
 import sqlalchemy
 
@@ -33,20 +31,22 @@ class MainWindow(wx.Frame):
         # Add a text editor and a status bar
         # Each of these is within the current instance
         # so that we can refer to them later.
-        self.control = wx.TextCtrl(self, 1, style=wx.TE_MULTILINE, size=wx.Size(500, 500))
+        self.editor = wx.TextCtrl(self, 1, style=wx.TE_MULTILINE, size=wx.Size(500, 500))
+        self.results = wx.TextCtrl(self, 1, style=wx.TE_MULTILINE, size=wx.Size(500, 200))
+
         self.CreateStatusBar() # A Statusbar in the bottom of the window
 
         # Setting up the menu. filemenu is a local variable at this stage.
         filemenu= wx.Menu()
         # use ID_ for future easy reference - much better that "48", "404" etc
         # The & character indicates the short cut key
-        filemenu.Append(ID_OPEN, "&Open"," Open a file to edit")
+        filemenu.Append(wx.ID_OPEN, "&Open"," Open a file to edit")
         filemenu.AppendSeparator()
-        filemenu.Append(ID_SAVE, "&Save"," Save file")
+        filemenu.Append(wx.ID_SAVE, "&Save"," Save file")
         filemenu.AppendSeparator()
-        filemenu.Append(ID_ABOUT, "&About"," Information about this program")
+        filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
         filemenu.AppendSeparator()
-        filemenu.Append(ID_EXIT,"E&xit"," Terminate the program")
+        filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 
         # Creating the menubar.
         menuBar = wx.MenuBar()
@@ -55,47 +55,56 @@ class MainWindow(wx.Frame):
         # Note - previous line stores the whole of the menu into the current object
 
         # Define the code to be run when a menu option is selected
-        wx.EVT_MENU(self, ID_ABOUT, self.OnAbout)
-        wx.EVT_MENU(self, ID_EXIT, self.OnExit)
-        wx.EVT_MENU(self, ID_OPEN, self.OnOpen)
-        wx.EVT_MENU(self, ID_SAVE, self.OnSave) # just "pass" in our demo
+        wx.EVT_MENU(self, wx.ID_ABOUT, self.OnAbout)
+        wx.EVT_MENU(self, wx.ID_EXIT, self.OnExit)
+        wx.EVT_MENU(self, wx.ID_OPEN, self.OnOpen)
+        wx.EVT_MENU(self, wx.ID_SAVE, self.OnSave) # just "pass" in our demo
 
-        # Set up a series of buttons arranged horizontally
-        self.databases = wx.BoxSizer(wx.VERTICAL)
-        self.buttons=[]
-        # Note - give the buttons numbers 1 to 6, generating events 301 to 306
-        # because IB_BUTTON1 is 300
 
         self.engine = sqlalchemy.create_engine(default_connection_string + 'postgres')
         self.connection = self.engine.connect()
         db_list = postgres_admin_queries.get_databases(self.connection)
-        for db in db_list:
-            i = db_list.index(db)
-            self.buttons.append(wx.Button(self, ID_BUTTON1+i, db.dbname))
-            # add that button to the sizer2 geometry
-            self.databases.Add(self.buttons[i],1,wx.EXPAND)
-            self.id_buttons[ID_BUTTON1+i] = db.dbname
 
-            self.buttons[i].Bind(wx.EVT_BUTTON, self.onButton)
+        self.db_listbox = wx.ListBox(choices=[], id=ID_DB_LISTBOX,
+            name='table_listbox', parent=self)
+        self.db_listbox.Bind(wx.EVT_LISTBOX, self.onDBSelect,
+            id=ID_DB_LISTBOX)
+        self.db_listbox.Set([db.dbname for db in db_list])
 
-        self.table_listbox = wx.ListBox(choices=[], id=ID_FRAME1LISTBOX1,
+        self.table_listbox = wx.ListBox(choices=[], id=ID_TABLE_LISTBOX,
             name='table_listbox', parent=self)
         self.table_listbox.Bind(wx.EVT_LISTBOX, self.onTableSelect,
-            id=ID_FRAME1LISTBOX1)
+            id=ID_TABLE_LISTBOX)
 
+
+        self.inner_panel=wx.BoxSizer(wx.VERTICAL)
+        self.inner_panel.Add(self.editor, 0, wx.EXPAND)
+        self.inner_panel.Add(self.results, 0, wx.EXPAND)
 
         # Set up the overall frame verically - text edit window above buttons
         # We want to arrange the buttons vertically below the text edit window
         self.sizer=wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer.Add(self.databases,0,wx.EXPAND)
+        self.sizer.Add(self.db_listbox,0,wx.EXPAND)
         self.sizer.Add(self.table_listbox, 1, wx.EXPAND )
-        self.sizer.Add(self.control, 2,wx.EXPAND)
+        self.sizer.Add(self.inner_panel, 2, wx.EXPAND)
+
+        # Set up a series of buttons arranged vertically over the top
+        self.outer_panel = wx.BoxSizer(wx.VERTICAL)
+
+        #Menu buttons
+        self.buttons = wx.BoxSizer(wx.HORIZONTAL)
+        run = wx.Button(self, ID_RUN_BUTTON, 'Run')
+        self.buttons.Add(run)
+        run.Bind(wx.EVT_BUTTON, self.onRun)
+
+        self.outer_panel.Add(self.buttons, 0, wx.EXPAND)
+        self.outer_panel.Add(self.sizer, 1, wx.EXPAND)
 
         # Tell it which sizer is to be used for main frame
         # It may lay out automatically and be altered to fit window
-        self.SetSizer(self.sizer)
+        self.SetSizer(self.outer_panel)
         self.SetAutoLayout(1)
-        self.sizer.Fit(self)
+        self.outer_panel.Fit(self)
 
         # Show it !!!
         self.Show(1)
@@ -112,10 +121,11 @@ class MainWindow(wx.Frame):
         # choose to edit in this frame
         self.dirname = ''
 
-    def onButton(self, e):
-        dbname = self.id_buttons[e.GetId()]
+    def onDBSelect(self, e):
+        dbname = self.db_listbox.GetStringSelection()
         self.engine = sqlalchemy.create_engine(default_connection_string + dbname)
-
+        self.connection = self.engine.connect()
+        self.SetTitle('Connected to %s' % dbname)
 
         #TODO: use the schema name too.
         inspector = sqlalchemy.inspect(self.engine)
@@ -123,7 +133,8 @@ class MainWindow(wx.Frame):
         self.table_listbox.Set(self.engine.table_names())
 
         views = inspector.get_view_names()
-
+        for v in views:
+            self.table_listbox.Append(v)
 
     def onTableSelect(self, event):
         '''
@@ -132,8 +143,6 @@ class MainWindow(wx.Frame):
 
 
         selName = self.table_listbox.GetStringSelection()
-        self.SetTitle(selName)
-
 
         inspector = sqlalchemy.inspect(self.engine)
         print inspector.default_schema_name
@@ -145,8 +154,15 @@ class MainWindow(wx.Frame):
         #if x is view:
             #print inspector.get_view_definition(selName)
 
+        self.editor.SetValue('')
 
-        self.control.SetValue('')
+    def onRun(self, event):
+        sql = self.editor.GetValue()
+        try:
+            results = self.connection.execute(sql).fetchall()
+        except Exception, e:
+            results = e.message
+        self.results.SetValue(str(results))
 
     def OnAbout(self,e):
         # A modal show will lock out the other windows until it has
@@ -178,7 +194,7 @@ class MainWindow(wx.Frame):
             # Open the file, read the contents and set them into
             # the text edit window
             filehandle=open(os.path.join(self.dirname, self.filename),'r')
-            self.control.SetValue(filehandle.read())
+            self.editor.SetValue(filehandle.read())
             filehandle.close()
 
             # Report on name of latest file read
@@ -194,7 +210,7 @@ class MainWindow(wx.Frame):
                 wx.SAVE | wx.OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             # Grab the content to be saved
-            itcontains = self.control.GetValue()
+            itcontains = self.editor.GetValue()
 
             # Open the file for write, write, close
             self.filename=dlg.GetFilename()
