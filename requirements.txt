@@ -1,0 +1,5 @@
+SQLAlchemy==0.9.8
+ipython==2.1.0
+psycopg2==2.5.4
+wxPython==3.0.1.1
+wxPython-common==3.0.1.1

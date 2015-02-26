@@ -6,6 +6,12 @@ To run the app run python -m 'app' from the directory where you checked out the 
 
 Executables will come at some point.
 
+
+Running the app is done by :
+
+python -m 'app'
+
+
 Goals (or why another db interface)
 
 pgAdminIII is pretty good, but it does have a tendency to crash at inopportune times, and is in c/c++ which I find is quite inapproachable and difficult to contribute to.  As such, I am hoping a concise python based desktop program will fill what I feel is a bit of a gap in the postgres community.

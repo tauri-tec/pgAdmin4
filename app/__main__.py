@@ -5,16 +5,25 @@ import wx
 # We're going to be handling files and directories
 import os
 
+import sqlalchemy
+
+import postgres_admin_queries
+
 # Set up some button numbers for the menu
 
 ID_DB_LISTBOX=300
 ID_TABLE_LISTBOX=150
 ID_RUN_BUTTON=400
 
+ID_ANALYZE = 500
 
-import sqlalchemy
+analyze_funcs = {500 + postgres_admin_queries.__dict__.keys().index(func): func
+                 for func in postgres_admin_queries.__dict__.keys()
+                 if func.startswith('check') or func.startswith('index')
+}
 
-import postgres_admin_queries
+
+
 
 default_connection_string = 'postgres://localhost:5432/'
 
@@ -41,16 +50,21 @@ class MainWindow(wx.Frame):
         # use ID_ for future easy reference - much better that "48", "404" etc
         # The & character indicates the short cut key
         filemenu.Append(wx.ID_OPEN, "&Open"," Open a file to edit")
-        filemenu.AppendSeparator()
         filemenu.Append(wx.ID_SAVE, "&Save"," Save file")
-        filemenu.AppendSeparator()
         filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
         filemenu.AppendSeparator()
         filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 
+        analyzemenu = wx.Menu()
+        analyzemenu.Append(ID_INDEX_CACHE, "&Index cache hit"," Show index cache hitrate")
+        analyzemenu.Append(ID_TABLE_CACHE, "Table Index Stat"," Show index hitrates per table")
+        analyzemenu.Append(wx.ID_ABOUT, "Other"," Information about this program")
+        analyzemenu.Append(wx.ID_EXIT,"Another"," Terminate the program")
+
         # Creating the menubar.
         menuBar = wx.MenuBar()
         menuBar.Append(filemenu,"&File") # Adding the "filemenu" to the MenuBar
+        menuBar.Append(analyzemenu,"&Analyze") # Adding the "filemenu" to the MenuBar
         self.SetMenuBar(menuBar) # Adding the MenuBar to the Frame content.
         # Note - previous line stores the whole of the menu into the current object
 
@@ -59,6 +73,9 @@ class MainWindow(wx.Frame):
         wx.EVT_MENU(self, wx.ID_EXIT, self.OnExit)
         wx.EVT_MENU(self, wx.ID_OPEN, self.OnOpen)
         wx.EVT_MENU(self, wx.ID_SAVE, self.OnSave) # just "pass" in our demo
+
+        wx.EVT_MENU(self, ID_INDEX_CACHE, self.onAnalyze)
+        wx.EVT_MENU(self, ID_TABLE_CACHE, self.onAnalyze)
 
 
         self.engine = sqlalchemy.create_engine(default_connection_string + 'postgres')
@@ -219,6 +236,9 @@ class MainWindow(wx.Frame):
             filehandle.close()
         # Get rid of the dialog to keep things tidy
         dlg.Destroy()
+
+    def onAnalyze(self, evt):
+        id = evt.GetId()
 
 # Set up a window based app, and create a main window in it
 app = wx.App(False)

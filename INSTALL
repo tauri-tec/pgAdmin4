@@ -1,0 +1,3 @@
+Installing files for development
+
+You'll need wxpython 3.0.1.1 or similar, python 2.7, sqlalchemy==0.9.8 and psycopg2.
