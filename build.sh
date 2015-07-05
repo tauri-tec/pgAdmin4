@@ -1,2 +1,3 @@
 #!/bin/sh
-python setup.py bdist_mac
+rm -rf  build/*
+python setup.py bdist_dmg
