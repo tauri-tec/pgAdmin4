@@ -14,7 +14,8 @@ import postgres_admin_queries
 ID_DB_LISTBOX=300
 ID_TABLE_LISTBOX=150
 ID_RUN_BUTTON=400
-
+ID_INDEX_CACHE = 600
+ID_TABLE_CACHE = 700
 ID_ANALYZE = 500
 
 analyze_funcs = {500 + postgres_admin_queries.__dict__.keys().index(func): func
