@@ -5,7 +5,7 @@ from cx_Freeze import setup, Executable
 build_exe_options = {
   "include_files": ['app/postgres_admin_queries.py', 'app/__init__.py'],
   "packages": ["os", "wx", "app", "psycopg2", "sqlalchemy"],
-  "excludes": ["tkinter", 'Tcl', 'Tk']
+  "excludes": ["tkinter", 'Tkinter', 'Tcl', 'Tk']
   }
 
 # GUI applications require a different base on Windows (the default is for a
