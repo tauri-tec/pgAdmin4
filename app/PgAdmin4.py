@@ -6,6 +6,7 @@ import wx
 import os
 
 import sqlalchemy
+import sqlalchemy.exc
 
 import postgres_admin_queries
 
@@ -26,15 +27,42 @@ analyze_funcs = {500 + postgres_admin_queries.__dict__.keys().index(func): func
 
 
 
-default_connection_string = 'postgres://localhost:5432/'
+default_connection_string = 'postgres://localhost:5433/'
 
 class MainWindow(wx.Frame):
     id_buttons = {}
 
     engine = None
     connection = None
+    conn_string = default_connection_string
 
-    def __init__(self,parent,title):
+    def connect_to_db(self):
+
+        ########### Initialise connection bits.
+        def try_sqla_conn(connection_string):
+            self.engine = sqlalchemy.create_engine(connection_string + 'postgres')
+            self.connection = self.engine.connect()
+
+        connected = False
+        while not connected:
+
+            try:
+                try_sqla_conn(self.conn_string)
+                connected = True
+            except sqlalchemy.exc.DBAPIError, e:
+                # Create text input
+                dlg = wx.TextEntryDialog(self, 'Enter sqlalchemy conenctions string', str(e))
+                dlg.SetValue(self.conn_string)
+                if dlg.ShowModal() == wx.ID_OK:
+                    #print 'You entered: %s\n' % dlg.GetValue()
+                    self.conn_string = dlg.GetValue()
+                dlg.Destroy()
+
+        db_list = postgres_admin_queries.get_databases(self.connection)
+        self.db_listbox.Set([db.dbname for db in db_list])
+
+    def __init__(self, parent, title):
+
         # based on a frame, so set up the frame
         wx.Frame.__init__(self,parent,wx.ID_ANY, title)
 
@@ -78,22 +106,15 @@ class MainWindow(wx.Frame):
         wx.EVT_MENU(self, ID_INDEX_CACHE, self.onAnalyze)
         wx.EVT_MENU(self, ID_TABLE_CACHE, self.onAnalyze)
 
-
-        self.engine = sqlalchemy.create_engine(default_connection_string + 'postgres')
-        self.connection = self.engine.connect()
-        db_list = postgres_admin_queries.get_databases(self.connection)
-
         self.db_listbox = wx.ListBox(choices=[], id=ID_DB_LISTBOX,
             name='table_listbox', parent=self)
         self.db_listbox.Bind(wx.EVT_LISTBOX, self.onDBSelect,
             id=ID_DB_LISTBOX)
-        self.db_listbox.Set([db.dbname for db in db_list])
 
         self.table_listbox = wx.ListBox(choices=[], id=ID_TABLE_LISTBOX,
             name='table_listbox', parent=self)
         self.table_listbox.Bind(wx.EVT_LISTBOX, self.onTableSelect,
             id=ID_TABLE_LISTBOX)
-
 
         self.inner_panel=wx.BoxSizer(wx.VERTICAL)
         self.inner_panel.Add(self.editor, 0, wx.EXPAND)
@@ -134,14 +155,19 @@ class MainWindow(wx.Frame):
         self.doiexit = wx.MessageDialog( self, " Exit - R U Sure? \n",
                         "GOING away ...", wx.YES_NO)
 
+        #self.do_connect = wx.TextEntryDialog(self, 'Enter sqlalchemy connection string', '')
+        #self.do_connect.SetValue(self.conn_string)
+
         # dirname is an APPLICATION variable that we're choosing to store
         # in with the frame - it's the parent directory for any file we
         # choose to edit in this frame
         self.dirname = ''
 
+        self.connect_to_db()
+
     def onDBSelect(self, e):
         dbname = self.db_listbox.GetStringSelection()
-        self.engine = sqlalchemy.create_engine(default_connection_string + dbname)
+        self.engine = sqlalchemy.create_engine(self.conn_string + dbname)
         self.connection = self.engine.connect()
         self.SetTitle('Connected to %s' % dbname)
 
@@ -223,7 +249,7 @@ class MainWindow(wx.Frame):
     def OnSave(self,e):
         # Save away the edited text
         # Open the file, do an RU sure check for an overwrite!
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", \
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*",
                 wx.SAVE | wx.OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             # Grab the content to be saved
@@ -241,8 +267,12 @@ class MainWindow(wx.Frame):
     def onAnalyze(self, evt):
         id = evt.GetId()
 
+
+
+
 # Set up a window based app, and create a main window in it
 app = wx.App(False)
+
 view = MainWindow(None, "pgAdmin4")
 # Enter event loop
 app.MainLoop()
