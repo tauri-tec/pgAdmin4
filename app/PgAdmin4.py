@@ -27,7 +27,7 @@ analyze_funcs = {500 + postgres_admin_queries.__dict__.keys().index(func): func
 
 
 
-default_connection_string = 'postgres://localhost:5432/'
+default_connection_string = 'postgres:///'
 
 class MainWindow(wx.Frame):
     id_buttons = {}
