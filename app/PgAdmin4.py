@@ -38,7 +38,7 @@ class MainWindow(wx.Frame):
 
     def connect_to_db(self):
 
-        ########### Initialise connection bits.
+        ########### Initialize connection bits.
         def try_sqla_conn(connection_string):
             self.engine = sqlalchemy.create_engine(connection_string + 'postgres')
             self.connection = self.engine.connect()
